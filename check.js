@@ -2,6 +2,7 @@ const puppeteer = require("puppeteer");
 const sharp = require("sharp");
 const axios = require("axios");
 const fs = require("fs");
+const FormData = require("form-data");
 
 (async () => {
   try {
@@ -23,7 +24,7 @@ const fs = require("fs");
     const screenshotPath = "full.png";
     const croppedPath = "cropped.png";
 
-    // 📸 แคปเต็มหน้า
+    // แคปเต็มหน้า
     await page.screenshot({
       path: screenshotPath,
       fullPage: true,
@@ -31,15 +32,21 @@ const fs = require("fs");
 
     await browser.close();
 
-    // 🪄 โหลดรูปมา crop
+    // อ่าน metadata
     const image = sharp(screenshotPath);
     const metadata = await image.metadata();
 
-    const cropRight = 200;   // 👉 ปรับได้
-    const cropBottom = 150;  // 👉 ปรับได้
+    console.log("Original size:", metadata.width, "x", metadata.height);
+
+    const cropRight = 300;   // ปรับได้
+    const cropBottom = 200;  // ปรับได้
 
     const newWidth = metadata.width - cropRight;
     const newHeight = metadata.height - cropBottom;
+
+    if (newWidth <= 0 || newHeight <= 0) {
+      throw new Error("Crop size invalid!");
+    }
 
     await image
       .extract({
@@ -50,23 +57,22 @@ const fs = require("fs");
       })
       .toFile(croppedPath);
 
-    console.log("Image cropped:", newWidth, "x", newHeight);
+    const croppedMeta = await sharp(croppedPath).metadata();
+    console.log("Cropped size:", croppedMeta.width, "x", croppedMeta.height);
 
-    // 📤 ส่งเข้า Telegram
-    const formData = new FormData();
-    formData.append("chat_id", chatId);
-    formData.append("photo", fs.createReadStream(croppedPath));
+    // ส่ง Telegram
+    const form = new FormData();
+    form.append("chat_id", chatId);
+    form.append("photo", fs.createReadStream(croppedPath));
 
     await axios.post(
       `https://api.telegram.org/bot${botToken}/sendPhoto`,
-      formData,
-      {
-        headers: formData.getHeaders(),
-      }
+      form,
+      { headers: form.getHeaders() }
     );
 
-    console.log("Sent to Telegram successfully!");
-  } catch (error) {
-    console.error("Error:", error);
+    console.log("Sent successfully!");
+  } catch (err) {
+    console.error("ERROR:", err);
   }
 })();
