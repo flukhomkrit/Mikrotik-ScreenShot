@@ -1,76 +1,72 @@
 const puppeteer = require("puppeteer");
+const sharp = require("sharp");
+const axios = require("axios");
 const fs = require("fs");
 
 (async () => {
   try {
-    console.log("🚀 เริ่มทำงาน...");
-
     const url = process.env.TARGET_URL;
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
-    console.log("🌐 URL:", url);
     console.log("Sending to chat_id:", chatId);
-    console.log("Bot token:", botToken ? botToken.slice(0, 10) + "..." : "undefined");
-
-    if (!url || !botToken || !chatId) {
-      throw new Error("❌ Secret ไม่ครบ");
-    }
+    console.log("Bot token:", botToken?.slice(0, 10));
+    console.log("Opening URL:", url);
 
     const browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     const page = await browser.newPage();
-    await page.setViewport({ width: 1000, height: 700 });
+    await page.goto(url, { waitUntil: "networkidle2" });
 
-    console.log("⏳ กำลังเปิดเว็บ...");
-    await page.goto(url, {
-      waitUntil: "networkidle2",
-      timeout: 60000
-    });
+    const screenshotPath = "full.png";
+    const croppedPath = "cropped.png";
 
-    await new Promise(resolve => setTimeout(resolve, 5000));
-
-    console.log("📸 กำลังแคปภาพ...");
+    // 📸 แคปเต็มหน้า
     await page.screenshot({
-      path: "screenshot.png",
-      fullPage: true
+      path: screenshotPath,
+      fullPage: true,
     });
 
     await browser.close();
 
-    console.log("📨 กำลังส่งเข้า Telegram...");
+    // 🪄 โหลดรูปมา crop
+    const image = sharp(screenshotPath);
+    const metadata = await image.metadata();
 
-    // ✅ ใช้ FormData ของ Node 20
-    const form = new FormData();
-    form.append("chat_id", chatId);
-    form.append(
-      "photo",
-      new Blob([fs.readFileSync("screenshot.png")]),
-      "screenshot.png"
-    );
+    const cropRight = 200;   // 👉 ปรับได้
+    const cropBottom = 150;  // 👉 ปรับได้
 
-    const response = await fetch(
+    const newWidth = metadata.width - cropRight;
+    const newHeight = metadata.height - cropBottom;
+
+    await image
+      .extract({
+        left: 0,
+        top: 0,
+        width: newWidth,
+        height: newHeight,
+      })
+      .toFile(croppedPath);
+
+    console.log("Image cropped:", newWidth, "x", newHeight);
+
+    // 📤 ส่งเข้า Telegram
+    const formData = new FormData();
+    formData.append("chat_id", chatId);
+    formData.append("photo", fs.createReadStream(croppedPath));
+
+    await axios.post(
       `https://api.telegram.org/bot${botToken}/sendPhoto`,
+      formData,
       {
-        method: "POST",
-        body: form
+        headers: formData.getHeaders(),
       }
     );
 
-    const result = await response.json();
-    console.log("📨 Telegram response:", result);
-
-    if (!result.ok) {
-      throw new Error("❌ Telegram ส่งไม่สำเร็จ");
-    }
-
-    console.log("✅ ส่งภาพเข้า Telegram สำเร็จ");
-
+    console.log("Sent to Telegram successfully!");
   } catch (error) {
-    console.error("🔥 ERROR:", error);
-    process.exit(1);
+    console.error("Error:", error);
   }
 })();
