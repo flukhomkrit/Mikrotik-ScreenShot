@@ -1,1 +1,29 @@
+name: Screenshot to Telegram
 
+on:
+  schedule:
+    - cron: "56 16 * * *"   # 23:56 Bangkok (UTC+7)
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Script
+        run: node check.js
+        env:
+          TARGET_URL: ${{ secrets.TARGET_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
