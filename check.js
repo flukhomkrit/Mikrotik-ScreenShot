@@ -6,74 +6,69 @@ const FormData = require("form-data");
 (async () => {
   try {
     const url = process.env.TARGET_URL;
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
+    console.log("TARGET_URL:", url);
     console.log("Sending to chat_id:", chatId);
     console.log("Bot token:", botToken?.slice(0, 10));
-    console.log("Opening URL:", url);
+
+    if (!url || !chatId || !botToken) {
+      throw new Error("Missing environment variables");
+    }
 
     const browser = await puppeteer.launch({
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     const page = await browser.newPage();
+    await page.setViewport({ width: 1400, height: 900 });
 
-    // ตั้ง viewport ชัด ๆ
-    await page.setViewport({
-      width: 1280,
-      height: 720,
+    await page.goto(url, {
+      waitUntil: "networkidle2",
+      timeout: 60000,
     });
 
-    await page.goto(url, { waitUntil: "networkidle2" });
+    await page.waitForTimeout(5000);
 
-    // ดึงขนาดหน้าเว็บจริง
-    const bodySize = await page.evaluate(() => {
+    const fullSize = await page.evaluate(() => {
       return {
         width: document.body.scrollWidth,
         height: document.body.scrollHeight,
       };
     });
 
-    console.log("Full page size:", bodySize.width, "x", bodySize.height);
+    console.log("Full size:", fullSize);
 
-    // 🔥 ปรับค่าตรงนี้
-    const cropRight = 300;   // ตัดด้านขวา
-    const cropBottom = 200;  // ตัดด้านล่าง
-
-    const clipWidth = bodySize.width - cropRight;
-    const clipHeight = bodySize.height - cropBottom;
-
-    console.log("Clip size:", clipWidth, "x", clipHeight);
-
-    const screenshotPath = "cropped.png";
+    const cropWidth = fullSize.width - 250;   // ตัดขวา
+    const cropHeight = fullSize.height - 200; // ตัดล่าง
 
     await page.screenshot({
-      path: screenshotPath,
+      path: "cropped.png",
       clip: {
         x: 0,
         y: 0,
-        width: clipWidth,
-        height: clipHeight,
+        width: cropWidth,
+        height: cropHeight,
       },
     });
 
     await browser.close();
 
-    // ส่ง Telegram
     const form = new FormData();
     form.append("chat_id", chatId);
-    form.append("photo", fs.createReadStream(screenshotPath));
+    form.append("photo", fs.createReadStream("cropped.png"));
 
-    await axios.post(
-      `https://api.telegram.org/bot${botToken}/sendPhoto`,
-      form,
-      { headers: form.getHeaders() }
-    );
+    const telegramUrl = `https://api.telegram.org/bot${botToken}/sendPhoto`;
 
-    console.log("Sent successfully!");
+    await axios.post(telegramUrl, form, {
+      headers: form.getHeaders(),
+      maxBodyLength: Infinity,
+    });
+
+    console.log("✅ Sent successfully");
   } catch (err) {
-    console.error("ERROR:", err);
+    console.error("❌ ERROR:", err);
+    process.exit(1);
   }
 })();
-
