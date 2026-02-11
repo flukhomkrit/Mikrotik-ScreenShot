@@ -2,25 +2,28 @@ name: Screenshot Bot
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
-  workflow_dispatch:
+    - cron: "*/15 * * * *"   # รันทุก 15 นาที
+  workflow_dispatch:        # กดรันเองได้
 
 jobs:
   run:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install Puppeteer
+        run: npm install puppeteer
 
       - name: Run script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TARGET_URL: ${{ secrets.TARGET_URL }}
         run: node check.js
