@@ -21,8 +21,8 @@ const FormData = require("form-data");
 
     // ตั้ง viewport ชัด ๆ
     await page.setViewport({
-      width: 1920,
-      height: 1080,
+      width: 1280,
+      height: 720,
     });
 
     await page.goto(url, { waitUntil: "networkidle2" });
@@ -76,3 +76,4 @@ const FormData = require("form-data");
     console.error("ERROR:", err);
   }
 })();
+
