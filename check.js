@@ -1,5 +1,4 @@
 const puppeteer = require("puppeteer");
-const sharp = require("sharp");
 const axios = require("axios");
 const fs = require("fs");
 const FormData = require("form-data");
@@ -19,51 +18,52 @@ const FormData = require("form-data");
     });
 
     const page = await browser.newPage();
+
+    // ตั้ง viewport ชัด ๆ
+    await page.setViewport({
+      width: 1920,
+      height: 1080,
+    });
+
     await page.goto(url, { waitUntil: "networkidle2" });
 
-    const screenshotPath = "full.png";
-    const croppedPath = "cropped.png";
+    // ดึงขนาดหน้าเว็บจริง
+    const bodySize = await page.evaluate(() => {
+      return {
+        width: document.body.scrollWidth,
+        height: document.body.scrollHeight,
+      };
+    });
 
-    // แคปเต็มหน้า
+    console.log("Full page size:", bodySize.width, "x", bodySize.height);
+
+    // 🔥 ปรับค่าตรงนี้
+    const cropRight = 300;   // ตัดด้านขวา
+    const cropBottom = 200;  // ตัดด้านล่าง
+
+    const clipWidth = bodySize.width - cropRight;
+    const clipHeight = bodySize.height - cropBottom;
+
+    console.log("Clip size:", clipWidth, "x", clipHeight);
+
+    const screenshotPath = "cropped.png";
+
     await page.screenshot({
       path: screenshotPath,
-      fullPage: true,
+      clip: {
+        x: 0,
+        y: 0,
+        width: clipWidth,
+        height: clipHeight,
+      },
     });
 
     await browser.close();
 
-    // อ่าน metadata
-    const image = sharp(screenshotPath);
-    const metadata = await image.metadata();
-
-    console.log("Original size:", metadata.width, "x", metadata.height);
-
-    const cropRight = 300;   // ปรับได้
-    const cropBottom = 200;  // ปรับได้
-
-    const newWidth = metadata.width - cropRight;
-    const newHeight = metadata.height - cropBottom;
-
-    if (newWidth <= 0 || newHeight <= 0) {
-      throw new Error("Crop size invalid!");
-    }
-
-    await image
-      .extract({
-        left: 0,
-        top: 0,
-        width: newWidth,
-        height: newHeight,
-      })
-      .toFile(croppedPath);
-
-    const croppedMeta = await sharp(croppedPath).metadata();
-    console.log("Cropped size:", croppedMeta.width, "x", croppedMeta.height);
-
     // ส่ง Telegram
     const form = new FormData();
     form.append("chat_id", chatId);
-    form.append("photo", fs.createReadStream(croppedPath));
+    form.append("photo", fs.createReadStream(screenshotPath));
 
     await axios.post(
       `https://api.telegram.org/bot${botToken}/sendPhoto`,
