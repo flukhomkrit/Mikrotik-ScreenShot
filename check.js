@@ -42,7 +42,7 @@ const FormData = require("form-data");
     console.log("Full size:", fullSize);
 
     const cropWidth = fullSize.width - 300;   // ตัดขวา
-    const cropHeight = fullSize.height - 100; // ตัดล่าง
+    const cropHeight = fullSize.height - 80; // ตัดล่าง
 
     await page.screenshot({
       path: "cropped.png",
