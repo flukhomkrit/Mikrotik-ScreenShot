@@ -22,7 +22,7 @@ const FormData = require("form-data");
     });
 
     const page = await browser.newPage();
-    await page.setViewport({ width: 1400, height: 900 });
+    await page.setViewport({ width: 1280, height: 720 });
 
     await page.goto(url, {
       waitUntil: "networkidle2",
@@ -41,7 +41,7 @@ const FormData = require("form-data");
 
     console.log("Full size:", fullSize);
 
-    const cropWidth = fullSize.width - 250;   // ตัดขวา
+    const cropWidth = fullSize.width - 300;   // ตัดขวา
     const cropHeight = fullSize.height - 200; // ตัดล่าง
 
     await page.screenshot({
