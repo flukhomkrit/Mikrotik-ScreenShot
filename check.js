@@ -1,6 +1,5 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
-const FormData = require("form-data");
 
 (async () => {
   try {
@@ -15,10 +14,9 @@ const FormData = require("form-data");
     console.log("Bot token:", botToken ? botToken.slice(0, 10) + "..." : "undefined");
 
     if (!url || !botToken || !chatId) {
-      throw new Error("❌ TELEGRAM_BOT_TOKEN หรือ TELEGRAM_CHAT_ID หรือ TARGET_URL ไม่ถูกตั้งค่า");
+      throw new Error("❌ Secret ไม่ครบ");
     }
 
-    // เปิด browser
     const browser = await puppeteer.launch({
       headless: "new",
       args: ["--no-sandbox", "--disable-setuid-sandbox"]
@@ -35,7 +33,6 @@ const FormData = require("form-data");
 
     await new Promise(resolve => setTimeout(resolve, 5000));
 
-
     console.log("📸 กำลังแคปภาพ...");
     await page.screenshot({
       path: "screenshot.png",
@@ -46,9 +43,14 @@ const FormData = require("form-data");
 
     console.log("📨 กำลังส่งเข้า Telegram...");
 
+    // ✅ ใช้ FormData ของ Node 20
     const form = new FormData();
     form.append("chat_id", chatId);
-    form.append("photo", fs.createReadStream("screenshot.png"));
+    form.append(
+      "photo",
+      new Blob([fs.readFileSync("screenshot.png")]),
+      "screenshot.png"
+    );
 
     const response = await fetch(
       `https://api.telegram.org/bot${botToken}/sendPhoto`,
