@@ -1,10 +1,8 @@
 {
-  "name": "screenshot-bot",
+  "name": "mikrotik-screenshot",
   "version": "1.0.0",
   "dependencies": {
-    "playwright": "^1.41.0",
-    "node-fetch": "^3.3.2",
-    "form-data": "^4.0.0"
+    "puppeteer": "^22.0.0",
+    "node-fetch": "^3.3.2"
   }
 }
-

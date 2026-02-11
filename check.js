@@ -7,7 +7,7 @@ const FormData = require("form-data");
   try {
     console.log("🚀 เริ่มทำงาน...");
 
-    const url = "http://915109c1f865.sn.mynetname.net:36130/graphs/iface/bridge-lan/";
+    const url = "http://915109c1f865.sn.mynetname.net:36130/graphs/iface/bridge%2Dlan/";
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
@@ -77,4 +77,3 @@ const FormData = require("form-data");
     process.exit(1);
   }
 })();
-
