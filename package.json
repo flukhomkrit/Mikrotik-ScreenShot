@@ -1,8 +1,14 @@
 {
-  "name": "mikrotik-screenshot",
+  "name": "mikrotik-screenshot-bot",
   "version": "1.0.0",
+  "description": "Screenshot website and send to Telegram",
+  "main": "check.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node check.js"
+  },
   "dependencies": {
     "puppeteer": "^22.0.0",
-    "node-fetch": "^3.3.2"
+    "form-data": "^4.0.0"
   }
 }
