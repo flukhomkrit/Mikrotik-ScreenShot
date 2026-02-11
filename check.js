@@ -1,34 +1,42 @@
 const { chromium } = require('playwright');
+const fetch = (...args) =>
+  import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const FormData = require('form-data');
+const fs = require('fs');
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
-  await page.goto('https://wifi.krufluke.com/', {
-    waitUntil: 'networkidle'
-  });
+  const url = 'http://915109c1f865.sn.mynetname.net:36130/graphs/iface/bridge%2Dlan/';
 
-  // 🔹 กรอกเลขบัตร 13 หลัก
-  await page.fill('input', '1234567890123');
-  // ถ้ามีหลาย input ให้เปลี่ยนเป็น '#idcard' หรือ 'input[name="idcard"]'
+  // เปิดเว็บ
+  await page.goto(url, { waitUntil: 'networkidle' });
 
-  // 🔹 กดปุ่มค้นหา
-  await page.click('button:has-text("ค้นหา")');
-
-  // 🔹 รอผลลัพธ์โหลด
+  // รอโหลดเพิ่ม (กันพลาดเว็บช้า)
   await page.waitForTimeout(3000);
 
-  // 🔹 ดึงข้อความทั้งหน้า (กรณีไม่รู้ id ผลลัพธ์)
-  const content = await page.textContent('body');
-
-  console.log('ผลลัพธ์ทั้งหมด:\n', content);
-
-  // 🔹 ตัวอย่างตรวจเงื่อนไข
-  if (content.includes('รหัส WiFi')) {
-    console.log('✅ พบข้อมูล WiFi');
-  } else if (content.includes('ไม่พบ')) {
-    console.log('❌ ไม่พบข้อมูล');
-  }
+  // แคปทั้งหน้า
+  await page.screenshot({
+    path: 'screenshot.png',
+    fullPage: true
+  });
 
   await browser.close();
+
+  // เตรียมส่งเข้า Telegram
+  const form = new FormData();
+  form.append('chat_id', process.env.TELEGRAM_CHAT_ID);
+  form.append('caption', `📸 Screenshot จาก:\n${url}`);
+  form.append('photo', fs.createReadStream('screenshot.png'));
+
+  await fetch(
+    `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendPhoto`,
+    {
+      method: 'POST',
+      body: form
+    }
+  );
+
+  console.log('✅ ส่งภาพเข้า Telegram สำเร็จ');
 })();
