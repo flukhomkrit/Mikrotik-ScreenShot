@@ -8,7 +8,7 @@ const fs = require('fs');
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
-  const url = 'http://915109c1f865.sn.mynetname.net:36130/graphs/iface/bridge%2Dlan/';
+  const url = 'http://915109c1f865.sn.mynetname.net:36130/graphs/iface/bridge-lan/';
 
   // เปิดเว็บ
   await page.goto(url, { waitUntil: 'networkidle' });
@@ -40,3 +40,4 @@ const fs = require('fs');
 
   console.log('✅ ส่งภาพเข้า Telegram สำเร็จ');
 })();
+
