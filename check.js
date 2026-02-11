@@ -23,7 +23,7 @@ const fs = require("fs");
     });
 
     const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 800 });
+    await page.setViewport({ width: 1000, height: 700 });
 
     console.log("⏳ กำลังเปิดเว็บ...");
     await page.goto(url, {
