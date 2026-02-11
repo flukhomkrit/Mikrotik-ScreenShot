@@ -1,89 +1,79 @@
-const { chromium } = require('playwright');
-const fetch = (...args) =>
-  import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const FormData = require('form-data');
-const fs = require('fs');
+const puppeteer = require("puppeteer");
+const fs = require("fs");
+const fetch = require("node-fetch");
+const FormData = require("form-data");
 
 (async () => {
   try {
     console.log("🚀 เริ่มทำงาน...");
 
     const url = "http://915109c1f865.sn.mynetname.net:36130/graphs/iface/bridge%2Dlan/";
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
 
-    // ตรวจสอบ secret
-    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) {
-      throw new Error("❌ TELEGRAM_BOT_TOKEN หรือ TELEGRAM_CHAT_ID ไม่ถูกตั้งค่า");
+    console.log("🌐 URL:", url);
+    console.log("💬 Chat ID:", chatId);
+
+    // ✅ บรรทัดที่เพิ่มตามที่ขอ
+    console.log("Sending to chat_id:", chatId);
+    console.log("Bot token:", process.env.TELEGRAM_BOT_TOKEN?.slice(0, 10));
+
+    if (!url || !botToken || !chatId) {
+      throw new Error("❌ Environment variable ไม่ครบ");
     }
 
-    const browser = await chromium.launch({ headless: true });
-
-    const page = await browser.newPage({
-      viewport: { width: 1280, height: 900 }
+    const browser = await puppeteer.launch({
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
 
-    console.log("🌐 เปิดเว็บ:", url);
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 800 });
 
-    await page.goto(url, {
-      waitUntil: "networkidle",
-      timeout: 60000
-    });
+    console.log("⏳ กำลังเปิดเว็บ...");
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
 
-    // รอโหลดเพิ่มเล็กน้อย
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
 
-    // 🔽 เลือกแบบที่ต้องการ
+    console.log("📸 กำลังแคปภาพ...");
 
-    // ✅ แบบที่ 1: แคปทั้งหน้า
     await page.screenshot({
       path: "screenshot.png",
-      fullPage: true
+      clip: {
+        x: 0,
+        y: 0,
+        width: 1280,
+        height: 600
+      }
     });
-
-    /*
-    // ✅ แบบที่ 2: แคปเฉพาะ element (ถ้ารู้ selector)
-    const element = await page.locator('img'); 
-    await element.first().screenshot({ path: "screenshot.png" });
-    */
 
     await browser.close();
 
-    console.log("📸 แคปหน้าจอเสร็จแล้ว");
+    console.log("📨 กำลังส่งเข้า Telegram...");
 
-    // ส่งเข้า Telegram
-    const form = new FormData();
-    form.append("chat_id", process.env.TELEGRAM_CHAT_ID);
-    form.append("caption", `📊 Network Graph\n${url}\n\n🕒 ${new Date().toLocaleString()}`);
-    form.append("photo", fs.createReadStream("screenshot.png"));
+    const formData = new FormData();
+    formData.append("chat_id", chatId);
+    formData.append("photo", fs.createReadStream("screenshot.png"));
 
     const response = await fetch(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendPhoto`,
+      `https://api.telegram.org/bot${botToken}/sendPhoto`,
       {
         method: "POST",
-        body: form
+        body: formData
       }
     );
 
-    const result = await response.text();
+    const result = await response.json();
     console.log("📨 Telegram response:", result);
+
+    if (!result.ok) {
+      throw new Error("❌ Telegram ส่งไม่สำเร็จ");
+    }
 
     console.log("✅ ส่งภาพเข้า Telegram สำเร็จ");
 
   } catch (error) {
     console.error("🔥 ERROR:", error);
-
-    // ถ้าเกิด error ส่งแจ้งเตือนข้อความแทน
-    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-      await fetch(
-        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: process.env.TELEGRAM_CHAT_ID,
-            text: "❌ GitHub Action เกิดข้อผิดพลาด:\n" + error.message
-          })
-        }
-      );
-    }
+    process.exit(1);
   }
 })();
