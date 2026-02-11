@@ -33,7 +33,8 @@ const FormData = require("form-data");
       timeout: 60000
     });
 
-    await page.waitForTimeout(5000); // รอโหลดกราฟ
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
 
     console.log("📸 กำลังแคปภาพ...");
     await page.screenshot({
